@@ -1,21 +1,26 @@
 irc = require 'irc'
 http = require 'http'
-libxml = require 'libxmljs'
 
 navi = new irc.Client 'hub.irc.hu', 'Navi', debug:true, channels: ['#hspbp']
 navi.hey = navi.addListener
 
-navi.hey 'message', (from, to, message) ->
-  prefix_regexp = "^#{@nick.toLowerCase()}(\:|\,) ?(.+?)$"
-  matches = message.toLowerCase().match new RegExp(prefix_regexp, 'g')
-  if matches 
-    @emit new RegExp(prefix_regexp, 'g').exec(message.toLowerCase())[2], from, to, message
-
 navi.hey 'listen', (from, to, message) ->
   navi.say to, "Hey, listen!"
 
-navi.on 'dalek', (from, to, message) ->
-  navi.say to, "EXTERMINATE"
+static = 
+  'dalek': "EXTERMINATE"
+  'timelord': "Bow ties are cool."
+  'about': "Hey, listen! You can find me at https://github.com/ktamas/navi"
+
+navi.on 'message', (from, to, message) ->
+  prefix_regexp = "^#{@nick.toLowerCase()}(\:|\,) ?(.+?)$"
+  matches = message.toLowerCase().match new RegExp(prefix_regexp, 'g')
+  if matches 
+    command = new RegExp(prefix_regexp, 'g').exec(message.toLowerCase())[2]
+    if static[command]
+      navi.say to, static[command]
+    else
+      @emit command, from, to, message
 
 navi.on 'weather', (from, to, message) ->
   jsdom = require 'jsdom'
@@ -26,7 +31,7 @@ navi.on 'weather', (from, to, message) ->
     done: (err, window) ->
       navi.say to, window.$("koponyeg\\:jelenido").attr('homerseklet') + ' fok van.'
   })
-  
+
 #navi.on "message", (nick, to, message) ->
   #try
     #[_, cmd] = message.match "^js:(.*)"
