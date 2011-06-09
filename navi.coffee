@@ -13,20 +13,25 @@ static =
   'about': "Hey, listen! You can find me at https://github.com/ktamas/navi"
 
 navi.on 'message', (from, to, message) ->
-  prefix_regexp = "^#{@nick.toLowerCase()}(\:|\,) ?(.+?)$"
-  matches = message.toLowerCase().match new RegExp(prefix_regexp, 'g')
-  if matches 
-    command = new RegExp(prefix_regexp, 'g').exec(message.toLowerCase())[2]
+  cmd_regexp = "^#{@nick.toLowerCase()}(\:|\,) ?(.+?)( .*?)?$"
+  # undorito undorito js regexpkezeles. undorito.
+  has_command = message.toLowerCase().match new RegExp(cmd_regexp, 'g')
+  if has_command 
+    arr = new RegExp(cmd_regexp, 'g').exec(message.toLowerCase())
+    command = arr[2]
     if static[command]
       navi.say to, static[command]
     else
-      @emit command, from, to, message
+      try
+        @emit command, from, to, message, arr[3].trim()
+      catch error
+        @emit command, from, to, message
 
-navi.on 'weather', (from, to, message) ->
+navi.on 'weather', (from, to, message, location=1) ->
   jsdom = require 'jsdom'
 
   jsdom.env({
-    html: 'http://koponyeg.hu/idojaras_rss.php?regios=1'
+    html: 'http://koponyeg.hu/idojaras_rss.php?regios=' + location
     scripts: [ 'http://code.jquery.com/jquery-1.5.min.js' ]
     done: (err, window) ->
       navi.say to, window.$("koponyeg\\:jelenido").attr('homerseklet') + ' fok van.'
