@@ -20,14 +20,13 @@ static =
   'timelord': "Bow ties are cool."
   'about': "Hey, listen! You can find me at https://github.com/ktamas/navi"
 
+prefix = process.argv[5] ? "!"
 
 navi.on 'message', (from, to, message) ->
-  prefix = process.argv[5] ? @nick
-  has_command = message.toLowerCase().match new RegExp("^#{prefix}.*?$", 'g')
+  command_regexp = new RegExp("^(#{@nick}|#{prefix}).*?$", 'g')
+  has_command = message.toLowerCase().match command_regexp
   if has_command 
-    [command, params...] = message.replace(prefix, '').replace(/(\,|\:)/, '').trim().split(' ')
-    console.log "command: #{command}"
-    console.log "params: #{params}"
+    [command, params...] = message.replace(prefix, '').replace(@nick, '').replace(/(\,|\:)/, '').trim().split(' ')
     if static[command]
       navi.say to, static[command]
     else
@@ -71,6 +70,14 @@ navi.on 'protolol', (from, to, message) ->
   mongoose.model('Protolol').find (err, items) ->
     random = Math.floor(Math.random()*items.length)
     navi.say to, items[random].body
+
+navi.on 'prefix', (from, to, message, params) ->
+  if params.length == 0
+    navi.say to, "My prefix is either my nick or '#{prefix}'"
+  else
+    prefix = params[0]
+    navi.say to, "My new prefix is either my nick or '#{prefix}'"
+
 #navi.on "message", (nick, to, message) ->
   #try
     #[_, cmd] = message.match "^js:(.*)"
