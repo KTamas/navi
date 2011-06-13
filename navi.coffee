@@ -1,7 +1,5 @@
 irc = require 'irc'
-jsdom = require 'jsdom'
-http = require 'http'
-mongoose = require 'mongoose'
+fs = require 'fs'
 
 navi = new irc.Client(
   process.argv[2], #server
@@ -11,7 +9,6 @@ navi = new irc.Client(
 )
 
 navi.hey = navi.addListener
-
 navi.hey 'listen', (from, to, message) ->
   navi.say to, "Hey, listen!"
 
@@ -20,63 +17,26 @@ static =
   'timelord': "Bow ties are cool."
   'about': "Hey, listen! You can find me at https://github.com/ktamas/navi"
 
-prefix = process.argv[5] ? "!"
+navi.prefix = process.argv[5] ? "!"
 
 navi.on 'message', (from, to, message) ->
-  command_regexp = new RegExp("^(#{@nick}|#{prefix}).*?$", 'g')
+  command_regexp = new RegExp("^(#{@nick}|#{@prefix}).*?$", 'g')
   has_command = message.toLowerCase().match command_regexp
   if has_command 
-    [command, params...] = message.replace(prefix, '').replace(@nick, '').replace(/(\,|\:)/, '').trim().split(' ')
+    [command, params...] = message.replace(@prefix, '').replace(@nick, '').replace(/(\,|\:)/, '').trim().split(' ')
     if static[command]
       navi.say to, static[command]
     else
-      @emit command, from, to, message, params
+      @emit command, navi, from, to, message, params
 
-navi.on 'weather', (from, to, message, location=1) ->
-  jsdom.env({
-    html: 'http://koponyeg.hu/idojaras_rss.php?regios=' + location
-    scripts: [ 'http://code.jquery.com/jquery-1.6.1.min.js' ]
-    done: (err, window) ->
-      navi.say to, window.$("koponyeg\\:jelenido").attr('homerseklet') + ' fok van.'
-  })
+fs.readdir './modules', (err, files) ->
+  for file in files
+    m = require './modules/' + file
+    navi.on m.handle, m.handler
 
-navi.on 'protoscrape', (from, to, message) ->
-  scrape = () ->
-    jsdom.env({
-      html: "http://protolol.com/page/#{i}"
-      scripts: [ 'http://code.jquery.com/jquery-1.6.1.min.js' ]
-      done: (err, window) ->
-        $ = window.$
-        items = $("#posts").clone()
-        $('div', items).remove()
-        $('li', items).each (c, item) ->
-          quote = new myProtolol()
-          quote.body = $(item).html().trim().replace("&ldquo;", "").replace("&rdquo;", "")
-          quote.save (err) ->
-            if err
-              console.log "oopsie"
-    }) 
-  scrape() for i in [1..11]
-  
-mongoose.connect('mongodb://localhost/navi_protolol')
-
-ProtololSchema = new mongoose.Schema
-  body: String
-
-mongoose.model('Protolol', ProtololSchema)
-myProtolol = mongoose.model('Protolol')
-
-navi.on 'protolol', (from, to, message) ->
-  mongoose.model('Protolol').find (err, items) ->
-    random = Math.floor(Math.random()*items.length)
-    navi.say to, items[random].body
-
-navi.on 'prefix', (from, to, message, params) ->
-  if params.length == 0
-    navi.say to, "My prefix is either my nick or '#{prefix}'"
-  else
-    prefix = params[0]
-    navi.say to, "My new prefix is either my nick or '#{prefix}'"
+process.on "SIGINT", ->
+  navi.disconnect "Bye!"
+  process.exit()
 
 #navi.on "message", (nick, to, message) ->
   #try
@@ -97,7 +57,3 @@ navi.on 'prefix', (from, to, message, params) ->
       #@say to, "YES MASTER I HAVE DONE IT"
   #catch e
     #@say to, "gebasz: #{e}"
-
-process.on "SIGINT", ->
-  navi.disconnect "Bye!"
-  process.exit()
