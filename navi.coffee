@@ -16,6 +16,7 @@ static =
   'dalek': "EXTERMINATE"
   'timelord': "Bow ties are cool."
   'about': "Hey, listen! You can find me at https://github.com/ktamas/navi"
+  'jwz': "Now you have two problems."
 
 navi.prefix = process.argv[5] ? "!"
 
@@ -30,30 +31,13 @@ navi.on 'message', (from, to, message) ->
       @emit command, navi, from, to, message, params
 
 fs.readdir './modules', (err, files) ->
-  for file in files
-    m = require './modules/' + file
-    navi.on m.handle, m.handler
+  if err
+    navi.say "Error: #{err}"
+  else
+    for file in files
+      m = require './modules/' + file
+      navi.on m.handle, m.handler
 
 process.on "SIGINT", ->
   navi.disconnect "Bye!"
   process.exit()
-
-#navi.on "message", (nick, to, message) ->
-  #try
-    #[_, cmd] = message.match "^js:(.*)"
-    #result = eval cmd
-    #if result
-      #@say to, result
-    #else
-      #@say to, "YES MASTER I HAVE DONE IT"
-  #catch e
-    #@say to, "gebasz: #{e}"
-  #try
-    #[_, cmd] = message.match "^coffeescript:(.*)"
-    #result = CoffeeScript.eval cmd, bare:true
-    #if result
-      #@say to, result
-    #else
-      #@say to, "YES MASTER I HAVE DONE IT"
-  #catch e
-    #@say to, "gebasz: #{e}"
